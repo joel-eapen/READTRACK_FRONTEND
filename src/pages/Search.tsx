@@ -1,34 +1,59 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { BookCard } from "../components/BookCard";
+import { BookDetailModal } from "../components/BookDetailModal";
 import { Badge, Button, Input } from "../components/ui";
-import { searchBooks } from "../services/bookSearch";
+import { useBookSearch } from "../services/useBookSearch";
 import { useLibrary } from "../store/LibraryContext";
 import type { Book } from "../types";
 import "./Search.css";
 
+const PAGE_SIZE = 20;
+
 export function Search() {
   const { has, addBook } = useLibrary();
+  const searchBooks = useBookSearch();
+
   const [query, setQuery] = useState("");
+  // The term that produced the current results (so pagination keeps the query).
+  const [activeQuery, setActiveQuery] = useState("");
   const [results, setResults] = useState<Book[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
+  const [selected, setSelected] = useState<Book | null>(null);
 
-  const handleSearch = async (e: FormEvent) => {
+  const runSearch = useCallback(
+    async (term: string, nextPage: number) => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await searchBooks(term, nextPage, PAGE_SIZE);
+        setResults(res.books);
+        setPage(res.page);
+        setHasMore(res.hasMore);
+        setActiveQuery(term);
+        setSearched(true);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Something went wrong. Try again.",
+        );
+        setResults([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [searchBooks],
+  );
+
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const q = query.trim();
     if (!q) return;
-    setLoading(true);
-    setError("");
-    try {
-      const books = await searchBooks(q);
-      setResults(books);
-      setSearched(true);
-    } catch {
-      setError("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
-    }
+    runSearch(q, 1);
   };
 
   return (
@@ -38,7 +63,7 @@ export function Search() {
         <p className="search__sub">Find a title and add it to your library.</p>
       </header>
 
-      <form className="search__bar" onSubmit={handleSearch} role="search">
+      <form className="search__bar" onSubmit={handleSubmit} role="search">
         <Input
           label="Search"
           placeholder="Title, author, keyword…"
@@ -51,7 +76,11 @@ export function Search() {
         </Button>
       </form>
 
-      {error ? <p className="search__error label-caps">{error}</p> : null}
+      {error ? (
+        <p className="search__error label-caps" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {searched && !loading && results.length === 0 && !error ? (
         <p className="search__empty label-caps">
@@ -66,6 +95,7 @@ export function Search() {
             <BookCard
               key={book.id}
               book={book}
+              onSelect={setSelected}
               footer={
                 inLibrary ? (
                   <Badge tone="success">In Library</Badge>
@@ -84,6 +114,51 @@ export function Search() {
           );
         })}
       </div>
+
+      {searched && results.length > 0 ? (
+        <nav className="search__pager" aria-label="Search results pages">
+          <Button
+            variant="neutral"
+            size="sm"
+            disabled={page <= 1 || loading}
+            onClick={() => runSearch(activeQuery, page - 1)}
+          >
+            ← Prev
+          </Button>
+          <span className="search__page-info label-caps">Page {page}</span>
+          <Button
+            variant="neutral"
+            size="sm"
+            disabled={!hasMore || loading}
+            onClick={() => runSearch(activeQuery, page + 1)}
+          >
+            Next →
+          </Button>
+        </nav>
+      ) : null}
+
+      <BookDetailModal
+        book={selected}
+        onClose={() => setSelected(null)}
+        actions={
+          selected ? (
+            has(selected.id) ? (
+              <Badge tone="success">In Library</Badge>
+            ) : (
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => {
+                  addBook(selected);
+                  setSelected(null);
+                }}
+              >
+                + Add to Library
+              </Button>
+            )
+          ) : null
+        }
+      />
     </div>
   );
 }

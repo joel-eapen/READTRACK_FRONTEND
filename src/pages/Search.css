@@ -36,10 +36,58 @@
   gap: var(--sp-6);
 }
 
+.search__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  margin-top: var(--sp-8);
+}
+
+.search__page-info {
+  color: var(--color-muted);
+}
+
+/* Tablet: tighter columns */
+@media (max-width: 900px) {
+  .search__grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--sp-4);
+  }
+}
+
+/* Mobile: 2 compact columns with shorter covers = smaller pictures */
 @media (max-width: 640px) {
   .search__grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--sp-4);
+    gap: var(--sp-3);
+  }
+  /* Shrink the cover height so searched book images are smaller */
+  .search__grid .book-card__cover {
+    aspect-ratio: auto;
+    height: 150px;
+  }
+  .search__grid .book-card__cover img {
+    object-fit: contain;
+  }
+  .search__grid .book-card__placeholder {
+    font-size: 1.6rem;
+  }
+  .search__grid .book-card__title {
+    font-size: 1rem;
+  }
+  .search__grid .book-card__authors {
+    font-size: 0.85rem;
+  }
+  .search__grid .book-card__body {
+    padding: var(--sp-2);
+  }
+}
+
+/* Small phones: even smaller covers */
+@media (max-width: 400px) {
+  .search__grid .book-card__cover {
+    height: 120px;
   }
 }
 
@@ -47,8 +95,5 @@
   .search__bar {
     flex-direction: column;
     align-items: stretch;
-  }
-  .search__grid {
-    grid-template-columns: 1fr;
   }
 }

@@ -6,6 +6,8 @@ export interface Book {
   authors: string[];
   year?: number;
   coverUrl?: string;
+  isbn?: string;
+  totalPages?: number;
 }
 
 export interface LibraryEntry extends Book {
