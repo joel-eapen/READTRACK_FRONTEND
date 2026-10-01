@@ -1,0 +1,92 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--color-neutral);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-hard-sm);
+  transition:
+    transform 0.06s ease,
+    box-shadow 0.06s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* Sizes */
+.btn--sm {
+  font-size: 0.7rem;
+  padding: var(--sp-1) var(--sp-3);
+}
+.btn--md {
+  font-size: 0.8rem;
+  padding: var(--sp-2) var(--sp-4);
+}
+.btn--lg {
+  font-size: 0.95rem;
+  padding: var(--sp-3) var(--sp-6);
+}
+
+.btn--full {
+  width: 100%;
+}
+
+/* Variants */
+.btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+.btn--secondary {
+  background: var(--color-secondary);
+  color: var(--color-ink);
+}
+.btn--neutral {
+  background: var(--color-neutral);
+  color: var(--color-ink);
+}
+.btn--danger {
+  background: var(--color-danger);
+  color: #fff;
+}
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Interaction states — hard press */
+.btn:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-hard);
+}
+.btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 0 var(--color-ink);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: var(--shadow-hard-sm);
+}
+
+/* Loading spinner */
+.btn__spinner {
+  width: 0.8em;
+  height: 0.8em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
