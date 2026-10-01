@@ -28,18 +28,9 @@
   max-width: 32ch;
 }
 
-.signin__card {
-  background: var(--color-surface);
-}
-
-.signin__heading {
-  margin-bottom: var(--sp-6);
-}
-
-.signin__form {
+.signin__clerk {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
+  justify-content: center;
 }
 
 .signin__note {
@@ -59,9 +50,8 @@
   .signin__blurb {
     margin: 0 auto;
   }
-  .signin__card {
+  .signin__clerk {
     width: 100%;
-    text-align: left;
   }
   .signin__title {
     font-size: 3.5rem;

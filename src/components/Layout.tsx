@@ -1,16 +1,9 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../store/AuthContext";
-import { Button } from "./ui";
+import { NavLink, Outlet } from "react-router-dom";
+import { UserButton, useUser } from "@clerk/clerk-react";
 import "./Layout.css";
 
 export function Layout() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSignOut = () => {
-    signOut();
-    navigate("/signin");
-  };
+  const { user } = useUser();
 
   return (
     <div className="layout">
@@ -40,13 +33,21 @@ export function Layout() {
 
         <div className="topbar__user">
           {user ? (
-            <>
-              <span className="topbar__email label-caps">{user.email}</span>
-              <Button variant="neutral" size="sm" onClick={handleSignOut}>
-                Sign Out
-              </Button>
-            </>
+            <span className="topbar__email label-caps">
+              {user.primaryEmailAddress?.emailAddress ?? user.username}
+            </span>
           ) : null}
+          <UserButton
+            afterSignOutUrl="/signin"
+            appearance={{
+              elements: {
+                avatarBox: {
+                  border: "3px solid #111827",
+                  borderRadius: "4px",
+                },
+              },
+            }}
+          />
         </div>
       </header>
 
