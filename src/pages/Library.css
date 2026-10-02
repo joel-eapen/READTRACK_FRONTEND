@@ -89,3 +89,34 @@
   color: var(--color-muted);
   margin-bottom: var(--sp-3);
 }
+
+.library__loading {
+  color: var(--color-muted);
+  padding: var(--sp-6) 0;
+}
+
+.library__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-6);
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hard-sm);
+  color: var(--color-danger);
+}
+
+.library__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  margin-top: var(--sp-8);
+}
+
+.library__page-info {
+  color: var(--color-muted);
+}

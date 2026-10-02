@@ -1,4 +1,4 @@
-export type ReadingStatus = "want" | "reading" | "finished" | "dnf";
+export type ReadingStatus = "want_to_read" | "current_read" | "finished";
 
 export interface Book {
   id: string;
@@ -19,10 +19,9 @@ export const STATUS_META: Record<
   ReadingStatus,
   { label: string; tone: "secondary" | "primary" | "success" | "danger" }
 > = {
-  want: { label: "Want to Read", tone: "secondary" },
-  reading: { label: "Reading", tone: "primary" },
+  want_to_read: { label: "Want to Read", tone: "secondary" },
+  current_read: { label: "Reading", tone: "primary" },
   finished: { label: "Finished", tone: "success" },
-  dnf: { label: "Did Not Finish", tone: "danger" },
 };
 
 export const STATUS_OPTIONS = (

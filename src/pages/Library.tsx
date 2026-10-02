@@ -13,16 +13,27 @@ import "./Library.css";
 type Filter = "all" | ReadingStatus;
 
 export function Library() {
-  const { entries, updateStatus, removeBook } = useLibrary();
+  const {
+    entries,
+    updateStatus,
+    removeBook,
+    loading,
+    error,
+    page,
+    totalPages,
+    totalDocuments,
+    goToPage,
+    refetch,
+  } = useLibrary();
   const [filter, setFilter] = useState<Filter>("all");
 
+  // Counts reflect the current page of results (the backend paginates).
   const counts = useMemo(() => {
     const base: Record<Filter, number> = {
       all: entries.length,
-      want: 0,
-      reading: 0,
+      want_to_read: 0,
+      current_read: 0,
       finished: 0,
-      dnf: 0,
     };
     for (const e of entries) base[e.status] += 1;
     return base;
@@ -36,18 +47,33 @@ export function Library() {
     [entries, filter],
   );
 
-  const filters: Filter[] = ["all", "want", "reading", "finished", "dnf"];
+  const filters: Filter[] = ["all", "want_to_read", "current_read", "finished"];
+
+  const isEmpty = !loading && !error && entries.length === 0;
 
   return (
     <div className="library">
       <header className="library__head">
         <h1>My Library</h1>
         <p className="library__sub">
-          {entries.length} {entries.length === 1 ? "book" : "books"} tracked
+          {totalDocuments} {totalDocuments === 1 ? "book" : "books"} tracked
         </p>
       </header>
 
-      {entries.length === 0 ? (
+      {error ? (
+        <div className="library__error" role="alert">
+          <p className="label-caps">{error}</p>
+          <Button variant="neutral" size="sm" onClick={refetch}>
+            Retry
+          </Button>
+        </div>
+      ) : null}
+
+      {loading && entries.length === 0 ? (
+        <p className="library__loading label-caps">Loading your library…</p>
+      ) : null}
+
+      {isEmpty ? (
         <div className="library__empty">
           <p className="library__empty-title">Your library is empty.</p>
           <p className="library__empty-text">
@@ -57,7 +83,7 @@ export function Library() {
             <Button size="lg">Search Books</Button>
           </Link>
         </div>
-      ) : (
+      ) : entries.length > 0 ? (
         <>
           <div className="library__filters" role="tablist" aria-label="Filter by status">
             {filters.map((f) => (
@@ -111,8 +137,32 @@ export function Library() {
               />
             ))}
           </div>
+
+          {totalPages > 1 ? (
+            <nav className="library__pager" aria-label="Library pages">
+              <Button
+                variant="neutral"
+                size="sm"
+                disabled={page <= 1 || loading}
+                onClick={() => goToPage(page - 1)}
+              >
+                ← Prev
+              </Button>
+              <span className="library__page-info label-caps">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="neutral"
+                size="sm"
+                disabled={page >= totalPages || loading}
+                onClick={() => goToPage(page + 1)}
+              >
+                Next →
+              </Button>
+            </nav>
+          ) : null}
         </>
-      )}
+      ) : null}
     </div>
   );
 }

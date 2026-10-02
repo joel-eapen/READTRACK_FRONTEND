@@ -23,6 +23,30 @@ export function Search() {
   const [error, setError] = useState("");
   const [searched, setSearched] = useState(false);
   const [selected, setSelected] = useState<Book | null>(null);
+  // id of the book currently being saved to the backend (for button spinner).
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [addError, setAddError] = useState("");
+
+  const handleAdd = useCallback(
+    async (book: Book): Promise<boolean> => {
+      setAddError("");
+      setAddingId(book.id);
+      try {
+        await addBook(book);
+        return true;
+      } catch (err) {
+        setAddError(
+          err instanceof Error
+            ? err.message
+            : `Couldn't add "${book.title}". Try again.`,
+        );
+        return false;
+      } finally {
+        setAddingId(null);
+      }
+    },
+    [addBook],
+  );
 
   const runSearch = useCallback(
     async (term: string, nextPage: number) => {
@@ -82,6 +106,12 @@ export function Search() {
         </p>
       ) : null}
 
+      {addError ? (
+        <p className="search__error label-caps" role="alert">
+          {addError}
+        </p>
+      ) : null}
+
       {searched && !loading && results.length === 0 && !error ? (
         <p className="search__empty label-caps">
           No books found. Try different keywords.
@@ -104,7 +134,9 @@ export function Search() {
                     variant="secondary"
                     size="sm"
                     fullWidth
-                    onClick={() => addBook(book)}
+                    loading={addingId === book.id}
+                    disabled={addingId !== null}
+                    onClick={() => handleAdd(book)}
                   >
                     + Add to Library
                   </Button>
@@ -148,9 +180,16 @@ export function Search() {
               <Button
                 variant="secondary"
                 fullWidth
-                onClick={() => {
-                  addBook(selected);
-                  setSelected(null);
+                loading={addingId === selected.id}
+                disabled={addingId !== null}
+                onClick={async () => {
+                  const target = selected;
+                  const ok = await handleAdd(target);
+                  if (ok) {
+                    setSelected((cur) =>
+                      cur?.id === target.id ? null : cur,
+                    );
+                  }
                 }}
               >
                 + Add to Library
