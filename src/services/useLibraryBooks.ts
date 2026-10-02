@@ -72,6 +72,9 @@ function mapEntry(item: BackendLibraryBook): LibraryEntry {
     totalPages: item.totalPages,
     status: toStatus(item.status),
     addedAt: Number.isNaN(addedAt) ? Date.now() : addedAt,
+    backendId: item._id,
+    pagesRead: item.pagesRead,
+    percentRead: item.percentRead,
   };
 }
 

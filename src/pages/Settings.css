@@ -1,0 +1,295 @@
+.settings__head {
+  margin-bottom: var(--sp-6);
+}
+
+.settings__sub {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  margin-top: var(--sp-2);
+}
+
+.settings__card {
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hard);
+  padding: var(--sp-6);
+  margin-bottom: var(--sp-6);
+}
+
+.settings__card-title {
+  margin-bottom: var(--sp-4);
+}
+
+.settings__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  align-items: flex-start;
+}
+
+.settings__form .field {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ---- One-time reveal ---- */
+.settings__reveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  align-items: flex-start;
+}
+
+.settings__warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: #fff7ed;
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-hard-sm);
+}
+
+.settings__warning-text {
+  flex: 1;
+  min-width: 220px;
+  color: var(--color-ink);
+}
+
+.settings__key-label {
+  color: var(--color-muted);
+}
+
+.settings__key-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.settings__key {
+  flex: 1;
+  min-width: 240px;
+  display: block;
+  padding: var(--sp-3) var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  word-break: break-all;
+  background: var(--color-paper);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+}
+
+.settings__error {
+  color: var(--color-danger);
+}
+
+/* ---- Existing keys list ---- */
+.settings__list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.settings__list-head .settings__card-title {
+  margin-bottom: 0;
+}
+
+.settings__muted {
+  color: var(--color-muted);
+}
+
+.settings__list-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  color: var(--color-danger);
+}
+
+.settings__keys {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.settings__key-item {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-paper);
+  border: var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-hard-sm);
+}
+
+.settings__key-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.settings__key-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+
+.settings__key-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  margin: 0;
+}
+.settings__key-meta dt {
+  color: var(--color-muted);
+}
+.settings__key-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.settings__key-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+
+/* ---- Usage note ---- */
+.settings__note-text {
+  color: var(--color-ink);
+  margin-bottom: var(--sp-3);
+}
+
+.settings__note-text code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--color-paper);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.settings__code {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-ink);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.settings__code code {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   Mobile responsiveness — tighten the big cards on small screens
+   ============================================================ */
+@media (max-width: 640px) {
+  .settings__head {
+    margin-bottom: var(--sp-4);
+  }
+  .settings__sub {
+    font-size: 1.05rem;
+  }
+
+  .settings__card {
+    padding: var(--sp-4);
+    margin-bottom: var(--sp-4);
+    /* lighter offset shadow so the card reads smaller */
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .settings__card-title {
+    margin-bottom: var(--sp-3);
+  }
+
+  /* Stack the list header so the Refresh button doesn't crowd the title */
+  .settings__list-head {
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  /* Full-width inputs/buttons in the create form */
+  .settings__form .field {
+    max-width: none;
+  }
+  .settings__form > .btn {
+    width: 100%;
+  }
+
+  /* Key reveal + revoke rows go full width and stack cleanly */
+  .settings__key-row {
+    flex-direction: column;
+  }
+  .settings__key-row .btn {
+    width: 100%;
+  }
+  .settings__key {
+    min-width: 0;
+    font-size: 0.85rem;
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .settings__warning {
+    padding: var(--sp-2) var(--sp-3);
+    box-shadow: none;
+  }
+  .settings__warning-text {
+    min-width: 0;
+    font-size: 0.95rem;
+  }
+
+  .settings__reveal > .btn {
+    width: 100%;
+  }
+
+  /* Compact key list items */
+  .settings__key-item {
+    padding: var(--sp-3);
+    box-shadow: none;
+  }
+  .settings__key-name {
+    font-size: 1.1rem;
+  }
+  .settings__key-meta {
+    gap: var(--sp-2) var(--sp-4);
+    font-size: 0.9rem;
+  }
+  .settings__key-actions .btn {
+    width: 100%;
+  }
+
+  .settings__code {
+    padding: var(--sp-2) var(--sp-3);
+  }
+  .settings__code code {
+    font-size: 0.8rem;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .settings__card {
+    padding: var(--sp-3);
+  }
+  .settings__key {
+    font-size: 0.78rem;
+  }
+}

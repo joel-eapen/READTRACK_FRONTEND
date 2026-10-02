@@ -37,29 +37,55 @@
   color: #fff;
 }
 
+/* ============================================================
+   Responsive book grid
+   ============================================================ */
 .library__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: var(--sp-6);
+  align-items: stretch;
 }
 
+/* Tablet */
+@media (max-width: 900px) {
+  .library__grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--sp-4);
+  }
+}
+
+/* Mobile: two per row */
 @media (max-width: 640px) {
   .library__grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--sp-4);
+    gap: var(--sp-4) var(--sp-3);
   }
   .library__filters {
     gap: var(--sp-1);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: var(--sp-1);
+    scrollbar-width: none;
+  }
+  .library__filters::-webkit-scrollbar {
+    display: none;
   }
   .library__filter {
     font-size: 0.65rem;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+}
+
+/* Small phones: single column */
+@media (max-width: 400px) {
+  .library__grid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 480px) {
-  .library__grid {
-    grid-template-columns: 1fr;
-  }
   .library__empty {
     padding: var(--sp-6);
   }
@@ -113,10 +139,52 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: var(--sp-4);
   margin-top: var(--sp-8);
 }
 
 .library__page-info {
   color: var(--color-muted);
+}
+
+.library__progress {
+  width: 100%;
+}
+
+.library__progress-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.library__no-progress {
+  color: var(--color-muted);
+  padding: var(--sp-1) 0;
+}
+
+.library__item-error {
+  color: var(--color-danger);
+}
+
+.library__detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.library__editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.library__editor-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
 }

@@ -74,6 +74,21 @@
   border-top: var(--border-weight) solid var(--color-ink);
   background: var(--color-surface);
   color: var(--color-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.layout__footer-link {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.layout__footer-link:hover {
+  color: var(--color-ink);
 }
 
 @media (max-width: 640px) {

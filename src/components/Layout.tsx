@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, Link } from "react-router-dom";
 import { UserButton, useUser } from "@clerk/clerk-react";
 import "./Layout.css";
 
@@ -29,6 +29,14 @@ export function Layout() {
           >
             Library
           </NavLink>
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `topbar__link label-caps ${isActive ? "is-active" : ""}`
+            }
+          >
+            Settings
+          </NavLink>
         </nav>
 
         <div className="topbar__user">
@@ -57,6 +65,9 @@ export function Layout() {
 
       <footer className="layout__footer label-caps">
         READTRACK — Brutalist Book Library
+        <Link to="/docs" className="layout__footer-link">
+          Developer API Docs
+        </Link>
       </footer>
     </div>
   );

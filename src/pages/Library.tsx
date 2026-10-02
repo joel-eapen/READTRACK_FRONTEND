@@ -1,22 +1,279 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { BookCard } from "../components/BookCard";
-import { Badge, Button, Select } from "../components/ui";
+import { BookDetailModal } from "../components/BookDetailModal";
+import { Badge, Button, Input, Select } from "../components/ui";
 import { useLibrary } from "../store/LibraryContext";
+import { useBookDetail } from "../services/useBookDetail";
 import {
   STATUS_META,
   STATUS_OPTIONS,
+  type LibraryEntry,
   type ReadingStatus,
 } from "../types";
 import "./Library.css";
 
 type Filter = "all" | ReadingStatus;
 
+/**
+ * The single-book editing surface shown inside the detail modal. Contains the
+ * full update logic for one book — status and reading progress — persisting to
+ * the backend (PATCH /api/books/:id) via the library context. Also exposes
+ * remove. Owns its own saving/error state.
+ */
+function BookEditor({
+  entry,
+  loadingDetail,
+  detailError,
+  onRemoved,
+}: {
+  entry: LibraryEntry;
+  loadingDetail: boolean;
+  detailError: string;
+  onRemoved: () => void;
+}) {
+  const { updateStatus, updateProgress, removeBook } = useLibrary();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [pagesDraft, setPagesDraft] = useState(
+    entry.pagesRead != null ? String(entry.pagesRead) : "",
+  );
+  const [percentDraft, setPercentDraft] = useState(
+    entry.percentRead != null ? String(entry.percentRead) : "",
+  );
+  // Which progress field is actively being edited. Editing one locks the
+  // other (the backend accepts only one of pagesRead/percentRead per request).
+  const [progressMode, setProgressMode] = useState<"pages" | "percent" | null>(
+    null,
+  );
+
+  const canTrackProgress = Boolean(entry.totalPages && entry.totalPages > 0);
+  const percent = entry.percentRead ?? 0;
+  const total = entry.totalPages ?? 0;
+
+  // Live previews mirroring the backend's rounding:
+  //   percent = round(pages / total * 100), pages = round(percent / 100 * total)
+  const parsedPages = Number(pagesDraft.trim());
+  const livePercentFromPages =
+    total > 0 && pagesDraft.trim() !== "" && Number.isFinite(parsedPages)
+      ? Math.min(100, Math.max(0, Math.round((parsedPages / total) * 100)))
+      : 0;
+
+  const parsedPercent = Number(percentDraft.trim());
+  const livePagesFromPercent =
+    total > 0 && percentDraft.trim() !== "" && Number.isFinite(parsedPercent)
+      ? Math.min(
+          total,
+          Math.max(0, Math.round((parsedPercent / 100) * total)),
+        )
+      : 0;
+
+  const handleStatus = async (status: ReadingStatus) => {
+    if (status === entry.status) return;
+    setError("");
+    setSaving(true);
+    try {
+      await updateStatus(entry.id, status);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update status.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onPagesChange = (value: string) => {
+    setPagesDraft(value);
+    setProgressMode(value.trim() === "" ? null : "pages");
+    setError("");
+  };
+
+  const onPercentChange = (value: string) => {
+    setPercentDraft(value);
+    setProgressMode(value.trim() === "" ? null : "percent");
+    setError("");
+  };
+
+  const resetProgress = () => {
+    setPagesDraft(entry.pagesRead != null ? String(entry.pagesRead) : "");
+    setPercentDraft(entry.percentRead != null ? String(entry.percentRead) : "");
+    setProgressMode(null);
+    setError("");
+  };
+
+  const saveProgress = async (e?: { preventDefault: () => void }) => {
+    e?.preventDefault();
+    if (!progressMode) return;
+
+    if (progressMode === "pages") {
+      const pagesRead = Number(pagesDraft.trim());
+      if (!Number.isInteger(pagesRead) || pagesRead < 0) {
+        setError("Enter a whole number of pages (0 or more).");
+        return;
+      }
+      if (entry.totalPages && pagesRead > entry.totalPages) {
+        setError(`Pages read can't exceed ${entry.totalPages}.`);
+        return;
+      }
+      if (pagesRead === entry.pagesRead) {
+        setProgressMode(null);
+        return;
+      }
+      setError("");
+      setSaving(true);
+      try {
+        await updateProgress(entry.id, { pagesRead });
+        setProgressMode(null);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Couldn't update progress.",
+        );
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // progressMode === "percent"
+    const percentRead = Number(percentDraft.trim());
+    if (!Number.isInteger(percentRead) || percentRead < 0 || percentRead > 100) {
+      setError("Enter a whole percentage between 0 and 100.");
+      return;
+    }
+    if (percentRead === entry.percentRead) {
+      setProgressMode(null);
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      await updateProgress(entry.id, { percentRead });
+      setProgressMode(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't update progress.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    setError("");
+    setSaving(true);
+    try {
+      await removeBook(entry.id);
+      onRemoved();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Couldn't remove this book.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="library__editor">
+      <div className="library__editor-row">
+        <Badge tone={STATUS_META[entry.status].tone}>
+          {STATUS_META[entry.status].label}
+        </Badge>
+        {loadingDetail ? (
+          <span className="label-caps">Refreshing…</span>
+        ) : null}
+      </div>
+
+      <Select
+        label="Status"
+        options={STATUS_OPTIONS}
+        value={entry.status}
+        disabled={saving}
+        onChange={(e) => handleStatus(e.target.value as ReadingStatus)}
+      />
+
+      {canTrackProgress ? (
+        <form onSubmit={saveProgress} className="library__progress-group">
+          <Input
+            label={`Pages read / ${entry.totalPages}`}
+            type="number"
+            min={0}
+            max={entry.totalPages}
+            inputMode="numeric"
+            value={pagesDraft}
+            disabled={saving || progressMode === "percent"}
+            onChange={(e) => onPagesChange(e.target.value)}
+            hint={
+              progressMode === "pages"
+                ? `→ ${livePercentFromPages}% (preview)`
+                : `${percent}% complete`
+            }
+          />
+
+          <Input
+            label="Percent read"
+            type="number"
+            min={0}
+            max={100}
+            inputMode="numeric"
+            value={percentDraft}
+            disabled={saving || progressMode === "pages"}
+            onChange={(e) => onPercentChange(e.target.value)}
+            hint={
+              progressMode === "percent"
+                ? `→ ${livePagesFromPercent} / ${entry.totalPages} pages (preview)`
+                : "0–100%"
+            }
+          />
+
+          <div className="library__editor-row">
+            <Button
+              type="submit"
+              size="sm"
+              loading={saving}
+              disabled={saving || progressMode === null}
+            >
+              Save progress
+            </Button>
+            {progressMode !== null ? (
+              <Button
+                type="button"
+                variant="neutral"
+                size="sm"
+                disabled={saving}
+                onClick={resetProgress}
+              >
+                Cancel
+              </Button>
+            ) : null}
+          </div>
+        </form>
+      ) : (
+        <p className="library__no-progress label-caps">
+          Progress unavailable (no page count)
+        </p>
+      )}
+
+      {error || detailError ? (
+        <p className="library__item-error label-caps" role="alert">
+          {error || detailError}
+        </p>
+      ) : null}
+
+      <Button
+        variant="danger"
+        size="sm"
+        fullWidth
+        loading={saving}
+        disabled={saving}
+        onClick={handleRemove}
+      >
+        Remove from Library
+      </Button>
+    </div>
+  );
+}
+
 export function Library() {
   const {
     entries,
-    updateStatus,
-    removeBook,
     loading,
     error,
     page,
@@ -24,8 +281,48 @@ export function Library() {
     totalDocuments,
     goToPage,
     refetch,
+    mergeEntry,
   } = useLibrary();
   const [filter, setFilter] = useState<Filter>("all");
+  const fetchDetail = useBookDetail();
+  // The book shown in the detail/edit modal (by id), plus fresh-fetch state.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+
+  // Always render the modal from the live context entry so status/progress
+  // updates (which mutate context state) are reflected immediately.
+  const selected = useMemo(
+    () => entries.find((e) => e.id === selectedId) ?? null,
+    [entries, selectedId],
+  );
+
+  const openDetail = async (entry: LibraryEntry) => {
+    // Show what we already have immediately, then refresh from the backend
+    // (GET /api/books/:id) for the authoritative values.
+    setSelectedId(entry.id);
+    setDetailError("");
+    if (!entry.backendId) return;
+
+    setDetailLoading(true);
+    try {
+      const fresh = await fetchDetail(entry.backendId);
+      // Fold the authoritative server values into context so the modal
+      // (which renders from context) and the grid both reflect them.
+      mergeEntry(fresh);
+    } catch (err) {
+      setDetailError(
+        err instanceof Error ? err.message : "Couldn't load book details.",
+      );
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setSelectedId(null);
+    setDetailError("");
+  };
 
   // Counts reflect the current page of results (the backend paginates).
   const counts = useMemo(() => {
@@ -106,33 +403,21 @@ export function Library() {
               <BookCard
                 key={entry.id}
                 book={entry}
+                onSelect={() => openDetail(entry)}
                 badge={
                   <Badge tone={STATUS_META[entry.status].tone}>
                     {STATUS_META[entry.status].label}
                   </Badge>
                 }
                 footer={
-                  <>
-                    <Select
-                      label="Status"
-                      options={STATUS_OPTIONS}
-                      value={entry.status}
-                      onChange={(e) =>
-                        updateStatus(
-                          entry.id,
-                          e.target.value as ReadingStatus,
-                        )
-                      }
-                    />
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      fullWidth
-                      onClick={() => removeBook(entry.id)}
-                    >
-                      Remove
-                    </Button>
-                  </>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    onClick={() => openDetail(entry)}
+                  >
+                    View & Update
+                  </Button>
                 }
               />
             ))}
@@ -163,6 +448,22 @@ export function Library() {
           ) : null}
         </>
       ) : null}
+
+      <BookDetailModal
+        book={selected}
+        onClose={closeDetail}
+        actions={
+          selected ? (
+            <BookEditor
+              key={`${selected.id}:${selected.pagesRead ?? ""}:${selected.percentRead ?? ""}:${selected.status}`}
+              entry={selected}
+              loadingDetail={detailLoading}
+              detailError={detailError}
+              onRemoved={closeDetail}
+            />
+          ) : null
+        }
+      />
     </div>
   );
 }

@@ -11,6 +11,8 @@ import {
 import { useAuth } from "@clerk/clerk-react";
 import { useAddBook } from "../services/useAddBook";
 import { useLibraryBooks } from "../services/useLibraryBooks";
+import { useUpdateBook, type BookUpdate } from "../services/useUpdateBook";
+import { useDeleteBook } from "../services/useDeleteBook";
 import type { Book, LibraryEntry, ReadingStatus } from "../types";
 
 export const LIBRARY_PAGE_SIZE = 20;
@@ -23,8 +25,28 @@ interface LibraryContextValue {
    * library. Resolves once the book is saved; rejects if the request fails.
    */
   addBook: (book: Book, status?: ReadingStatus) => Promise<void>;
-  removeBook: (id: string) => void;
-  updateStatus: (id: string, status: ReadingStatus) => void;
+  /**
+   * Delete a book from the backend (DELETE /api/books/:id) and remove it from
+   * the library. Removes optimistically and restores the book if the request
+   * fails. Rejects on failure.
+   */
+  removeBook: (id: string) => Promise<void>;
+  /** Merge an authoritative entry (e.g. from GET /api/books/:id) into state. */
+  mergeEntry: (entry: LibraryEntry) => void;
+  /**
+   * Persist a status change to the backend (PATCH /api/books/:id). Updates
+   * optimistically and reverts if the request fails. Rejects on failure.
+   */
+  updateStatus: (id: string, status: ReadingStatus) => Promise<void>;
+  /**
+   * Persist reading progress to the backend (PATCH /api/books/:id). Provide
+   * exactly one of pagesRead / percentRead. Updates optimistically and reverts
+   * if the request fails. Rejects on failure.
+   */
+  updateProgress: (
+    id: string,
+    progress: { pagesRead?: number; percentRead?: number },
+  ) => Promise<void>;
   // Backend-sourced state (GET /api/books).
   loading: boolean;
   error: string;
@@ -75,6 +97,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
   const persistBook = useAddBook();
   const fetchLibrary = useLibraryBooks();
+  const persistUpdate = useUpdateBook();
+  const persistDelete = useDeleteBook();
 
   const [entries, setEntries] = useState<LibraryEntry[]>(loadEntries);
   const [page, setPage] = useState(1);
@@ -158,15 +182,84 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [entries, persistBook, refetch],
   );
 
-  const removeBook = useCallback((id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+  const removeBook = useCallback(
+    async (id: string) => {
+      const target = entries.find((e) => e.id === id);
+      if (!target) return;
 
-  const updateStatus = useCallback((id: string, status: ReadingStatus) => {
+      // Optimistically remove so the UI responds instantly, then persist.
+      const snapshot = entries;
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+
+      try {
+        await persistDelete(target);
+        setTotalDocuments((n) => Math.max(0, n - 1));
+      } catch (err) {
+        // Restore the prior snapshot on failure.
+        setEntries(snapshot);
+        throw err;
+      }
+    },
+    [entries, persistDelete],
+  );
+
+  // Merge a freshly-fetched entry (e.g. from GET /api/books/:id) into state so
+  // consumers reading from context reflect the authoritative server values.
+  const mergeEntry = useCallback((entry: LibraryEntry) => {
     setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status } : e)),
+      prev.some((e) => e.id === entry.id)
+        ? prev.map((e) => (e.id === entry.id ? { ...e, ...entry } : e))
+        : prev,
     );
   }, []);
+
+  // Shared optimistic PATCH /api/books/:id helper. Applies `optimistic` to the
+  // matching entry immediately, calls the backend, reconciles with the server
+  // response on success, and reverts to the prior snapshot on failure.
+  const applyPatch = useCallback(
+    async (
+      id: string,
+      update: BookUpdate,
+      optimistic: (entry: LibraryEntry) => LibraryEntry,
+    ) => {
+      const target = entries.find((e) => e.id === id);
+      if (!target) return;
+
+      const snapshot = target;
+      setEntries((prev) =>
+        prev.map((e) => (e.id === id ? optimistic(e) : e)),
+      );
+
+      try {
+        const updated = await persistUpdate(target, update);
+        setEntries((prev) =>
+          prev.map((e) => (e.id === id ? updated : e)),
+        );
+      } catch (err) {
+        // Revert the optimistic change.
+        setEntries((prev) =>
+          prev.map((e) => (e.id === id ? snapshot : e)),
+        );
+        throw err;
+      }
+    },
+    [entries, persistUpdate],
+  );
+
+  const updateStatus = useCallback(
+    (id: string, status: ReadingStatus) =>
+      applyPatch(id, { status }, (e) => ({ ...e, status })),
+    [applyPatch],
+  );
+
+  const updateProgress = useCallback(
+    (
+      id: string,
+      progress: { pagesRead?: number; percentRead?: number },
+    ) =>
+      applyPatch(id, progress, (e) => ({ ...e, ...progress })),
+    [applyPatch],
+  );
 
   const value = useMemo(
     () => ({
@@ -174,7 +267,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       has,
       addBook,
       removeBook,
+      mergeEntry,
       updateStatus,
+      updateProgress,
       loading,
       error,
       page,
@@ -188,7 +283,9 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       has,
       addBook,
       removeBook,
+      mergeEntry,
       updateStatus,
+      updateProgress,
       loading,
       error,
       page,

@@ -13,6 +13,12 @@ export interface Book {
 export interface LibraryEntry extends Book {
   status: ReadingStatus;
   addedAt: number;
+  /** Mongo _id of the persisted book; required to call PATCH /api/books/:id. */
+  backendId?: string;
+  /** Pages read so far (0..totalPages). */
+  pagesRead?: number;
+  /** Reading progress as a percentage (0..100). */
+  percentRead?: number;
 }
 
 export const STATUS_META: Record<
