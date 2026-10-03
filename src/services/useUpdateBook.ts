@@ -31,11 +31,16 @@ interface ApiEnvelope<T> {
  * Fields accepted by PATCH /api/books/:id. The backend accepts at most one of
  * `pagesRead` / `percentRead` per request (sending both is a 400), and derives
  * the other value plus startedAt/finishedAt side effects from `status`.
+ *
+ * `totalPages` updates the book's page count. NOTE: the backend expects this
+ * field under the key `TotalPages` (capitalised); the mapping happens in the
+ * request body below, so callers use the camelCase `totalPages` here.
  */
 export interface BookUpdate {
   status?: ReadingStatus;
   pagesRead?: number;
   percentRead?: number;
+  totalPages?: number;
 }
 
 const VALID_STATUSES: ReadingStatus[] = [
@@ -72,15 +77,15 @@ function applyUpdate(prev: LibraryEntry, item: BackendBook): LibraryEntry {
 
 /**
  * Hook exposing a function that updates a library book on the backend
- * (PATCH /api/books/:id) with a status and/or reading-progress change.
- * Requires an authenticated Clerk session; the token is attached by useApi().
+ * (PATCH /api/books/:id) with a status, reading-progress, and/or total-pages
+ * change. Requires an authenticated Clerk session; the token is attached by
+ * useApi().
  *
  * `entry` must carry a backendId (the Mongo _id); the externalId is not a
  * valid route param. Returns the merged LibraryEntry reflecting the backend.
  *
- * NOTE: The backend currently registers this route as "/books:id" (no slash),
- * so the effective path is `/api/books:id`. This client targets the intended
- * `/api/books/:id`; if the backend route isn't fixed these calls will 404.
+ * The frontend `BookUpdate` uses camelCase `totalPages`; this is mapped to the
+ * backend's expected `TotalPages` key when building the request body.
  */
 export function useUpdateBook() {
   const api = useApi();
@@ -97,11 +102,17 @@ export function useUpdateBook() {
         throw new Error("Provide either pages read or percent read, not both.");
       }
 
+      // Map camelCase frontend fields onto the backend's wire contract. The
+      // backend expects `TotalPages` (capitalised) for the page-count update.
+      const { totalPages, ...rest } = update;
+      const body: Record<string, unknown> = { ...rest };
+      if (totalPages !== undefined) body.TotalPages = totalPages;
+
       const res = await api<ApiEnvelope<BackendBook>>(
         `/api/books/${encodeURIComponent(entry.backendId)}`,
         {
           method: "PATCH",
-          body: JSON.stringify(update),
+          body: JSON.stringify(body),
         },
       );
 

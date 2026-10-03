@@ -47,6 +47,12 @@ interface LibraryContextValue {
     id: string,
     progress: { pagesRead?: number; percentRead?: number },
   ) => Promise<void>;
+  /**
+   * Persist a new total page count to the backend (PATCH /api/books/:id,
+   * sent as `TotalPages`). Updates optimistically and reverts if the request
+   * fails. Rejects on failure.
+   */
+  updateTotalPages: (id: string, totalPages: number) => Promise<void>;
   // Backend-sourced state (GET /api/books).
   loading: boolean;
   error: string;
@@ -261,6 +267,12 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     [applyPatch],
   );
 
+  const updateTotalPages = useCallback(
+    (id: string, totalPages: number) =>
+      applyPatch(id, { totalPages }, (e) => ({ ...e, totalPages })),
+    [applyPatch],
+  );
+
   const value = useMemo(
     () => ({
       entries,
@@ -270,6 +282,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       mergeEntry,
       updateStatus,
       updateProgress,
+      updateTotalPages,
       loading,
       error,
       page,
@@ -286,6 +299,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       mergeEntry,
       updateStatus,
       updateProgress,
+      updateTotalPages,
       loading,
       error,
       page,

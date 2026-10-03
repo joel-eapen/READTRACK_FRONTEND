@@ -32,9 +32,17 @@ function BookEditor({
   detailError: string;
   onRemoved: () => void;
 }) {
-  const { updateStatus, updateProgress, removeBook } = useLibrary();
+  const { updateStatus, updateProgress, updateTotalPages, removeBook } =
+    useLibrary();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [totalPagesDraft, setTotalPagesDraft] = useState(
+    entry.totalPages != null && entry.totalPages > 0
+      ? String(entry.totalPages)
+      : "",
+  );
+  // Whether the total-pages field is actively being edited.
+  const [editingTotal, setEditingTotal] = useState(false);
   const [pagesDraft, setPagesDraft] = useState(
     entry.pagesRead != null ? String(entry.pagesRead) : "",
   );
@@ -76,6 +84,60 @@ function BookEditor({
       await updateStatus(entry.id, status);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't update status.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onTotalPagesChange = (value: string) => {
+    setTotalPagesDraft(value);
+    setEditingTotal(value.trim() !== "");
+    setError("");
+  };
+
+  const resetTotalPages = () => {
+    setTotalPagesDraft(
+      entry.totalPages != null && entry.totalPages > 0
+        ? String(entry.totalPages)
+        : "",
+    );
+    setEditingTotal(false);
+    setError("");
+  };
+
+  const saveTotalPages = async (e?: { preventDefault: () => void }) => {
+    e?.preventDefault();
+    const totalPages = Number(totalPagesDraft.trim());
+    if (!Number.isInteger(totalPages) || totalPages < 1) {
+      setError("Enter a whole number of pages (1 or more).");
+      return;
+    }
+    if (totalPages === entry.totalPages) {
+      setEditingTotal(false);
+      return;
+    }
+
+    // Updating the total page count resets pages read to 0 on the backend.
+    // For a finished book this is especially surprising (it drops from
+    // complete back to 0), so confirm before proceeding.
+    if (entry.status === "finished") {
+      const ok = window.confirm(
+        "This book is marked as finished. Updating the total pages will reset " +
+          "its pages read to 0, so it will no longer show as fully read. " +
+          "You'll need to set the pages read or status again. Continue?",
+      );
+      if (!ok) return;
+    }
+
+    setError("");
+    setSaving(true);
+    try {
+      await updateTotalPages(entry.id, totalPages);
+      setEditingTotal(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Couldn't update total pages.",
+      );
     } finally {
       setSaving(false);
     }
@@ -189,6 +251,67 @@ function BookEditor({
         onChange={(e) => handleStatus(e.target.value as ReadingStatus)}
       />
 
+      <form onSubmit={saveTotalPages} className="library__total-group">
+        {!canTrackProgress ? (
+          <div className="library__total-warning" role="alert">
+            <Badge tone="warning">No total pages</Badge>
+            <p className="library__total-warning-text">
+              This book has no total page count. Enter the number of pages
+              below to enable progress tracking. You can also update it later
+              if the figure looks incorrect.
+            </p>
+          </div>
+        ) : null}
+
+        <Input
+          label="Total pages"
+          type="number"
+          min={1}
+          inputMode="numeric"
+          value={totalPagesDraft}
+          disabled={saving}
+          onChange={(e) => onTotalPagesChange(e.target.value)}
+          hint={
+            canTrackProgress
+              ? "Edit the book's page count if it looks incorrect"
+              : "Set a page count to track reading progress"
+          }
+        />
+        {editingTotal ? (
+          <>
+            {entry.status === "finished" ? (
+              <div className="library__total-warning" role="alert">
+                <Badge tone="warning">Heads up</Badge>
+                <p className="library__total-warning-text">
+                  This book is finished. Saving a new total page count will
+                  reset its pages read to 0, so it will no longer show as fully
+                  read.
+                </p>
+              </div>
+            ) : null}
+            <div className="library__editor-row">
+              <Button
+                type="submit"
+                size="sm"
+                loading={saving}
+                disabled={saving}
+              >
+                Save total pages
+              </Button>
+              <Button
+                type="button"
+                variant="neutral"
+                size="sm"
+                disabled={saving}
+                onClick={resetTotalPages}
+              >
+                Cancel
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </form>
+
       {canTrackProgress ? (
         <form onSubmit={saveProgress} className="library__progress-group">
           <Input
@@ -247,7 +370,7 @@ function BookEditor({
         </form>
       ) : (
         <p className="library__no-progress label-caps">
-          Progress unavailable (no page count)
+          Set a total page count above to track progress
         </p>
       )}
 
@@ -455,7 +578,7 @@ export function Library() {
         actions={
           selected ? (
             <BookEditor
-              key={`${selected.id}:${selected.pagesRead ?? ""}:${selected.percentRead ?? ""}:${selected.status}`}
+              key={`${selected.id}:${selected.pagesRead ?? ""}:${selected.percentRead ?? ""}:${selected.status}:${selected.totalPages ?? ""}`}
               entry={selected}
               loadingDetail={detailLoading}
               detailError={detailError}
